@@ -2,7 +2,7 @@ from langchain_ollama import ChatOllama
 from langchain_core.messages import HumanMessage, ToolMessage
 
 from models import BreakRecord
-from tools import get_region_code
+from tools import get_region_code, validate_account
 
 def main():
     record = BreakRecord(
@@ -17,43 +17,54 @@ def main():
         difference=515.67
     )
 
+    tools = {
+        get_region_code.name: get_region_code,
+        validate_account.name: validate_account
+    }
+
     model = ChatOllama(
         model='qwen3:8b',
         temperature=0
     )
-    model_with_tools = model.bind_tools([get_region_code])
+    model_with_tools = model.bind_tools(list(tools.values()))
 
     messages = [
         HumanMessage(
             content=(
-                'Find the EDMCS region code for entity '
-                f"'{record.entity}'. Use the available tool."
+                'Investigate whether the account is valid in EDMCS.\n'
+                'First call get_region_code using the entity.\n'
+                'Then call validate_account.\n'
+                'For validate_account, copy the exact region code returned by '
+                'get_region_code. Do not infer, translate, replace, or normalize it.\n\n'
+                f'Entity: {record.entity}\n'
+                f'Account: {record.account}'
             )
         )
     ]
 
-    # First model call: requests the tool
-    ai_message = model_with_tools.invoke(messages)
-    messages.append(ai_message)
+    while True:
+        ai_message = model_with_tools.invoke(messages)
+        messages.append(ai_message)
 
-    tool_call = ai_message.tool_calls[0]
+        if not ai_message.tool_calls:
+            print('Final response:', ai_message.content)
+            break
 
-    # Python executes the requested tool
-    tool_result = get_region_code.invoke(tool_call['args'])
+        for tool_call in ai_message.tool_calls:
+            selected_tool = tools[tool_call['name']]
+            tool_result = selected_tool.invoke(tool_call['args'])
 
-    # Return the tool result to the model
-    messages.append(
-        ToolMessage(
-            content=str(tool_result),
-            tool_call_id=tool_call['id'],
-        )
-    )
+            print(
+                f"{tool_call['name']}({tool_call['args']}) "
+                f'-> {tool_result}'
+            )
 
-    # Second model call: model sees the tool result
-    final_response = model_with_tools.invoke(messages)
-
-    print('Tool result:', tool_result)
-    print('Final response:', final_response.content)
+            messages.append(
+                ToolMessage(
+                    content=str(tool_result),
+                    tool_call_id=tool_call['id'],
+                )
+            )
 
 
 if __name__ == '__main__':
