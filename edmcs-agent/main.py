@@ -2,7 +2,7 @@ from langchain_ollama import ChatOllama
 from langchain_core.messages import HumanMessage, ToolMessage
 
 from models import BreakRecord
-from tools import get_region_code, validate_account
+from tools import get_region_code, validate_account, validate_entity
 
 def main():
     record = BreakRecord(
@@ -19,7 +19,8 @@ def main():
 
     tools = {
         get_region_code.name: get_region_code,
-        validate_account.name: validate_account
+        validate_account.name: validate_account,
+        validate_entity.name: validate_entity
     }
 
     model = ChatOllama(
@@ -31,11 +32,17 @@ def main():
     messages = [
         HumanMessage(
             content=(
-                'Investigate whether the account is valid in EDMCS.\n'
-                'First call get_region_code using the entity.\n'
-                'Then call validate_account.\n'
-                'For validate_account, copy the exact region code returned by '
-                'get_region_code. Do not infer, translate, replace, or normalize it.\n\n'
+                'Investigate whether the account and entity in this '
+                'reconciliation record are valid in EDMCS.\n\n'
+                'Instructions:\n'
+                '1. First call get_region_code using the entity.\n'
+                '2. Copy the exact region code returned by that tool.\n'
+                '3. Use that exact region code to call validate_account.\n'
+                '4. Use that same exact region code to call validate_entity.\n'
+                '5. Validate both segments even if one validation fails.\n'
+                '6. Do not infer, replace, translate, or normalize the '
+                'region code.\n'
+                '7. After both validations, provide a combined conclusion.\n\n'
                 f'Entity: {record.entity}\n'
                 f'Account: {record.account}'
             )

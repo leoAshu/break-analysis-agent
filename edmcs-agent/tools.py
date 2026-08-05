@@ -42,3 +42,29 @@ def validate_account(account: str, region_code: str) -> str:
         f'Account {account} is not valid in EDMCS '
         f'for region {region_code}.'
     )
+
+@tool
+def validate_entity(entity: str, region_code: str) -> str:
+    '''Validate whether an entity exists in EDMCS for the supplied region.'''
+
+    valid_entities_by_region = {
+        'AD': {'505890', '505893'},
+        'EMEA': {'505891'},
+        'APAC': {'505892'},
+    }
+
+    valid_entities = valid_entities_by_region.get(region_code)
+
+    if valid_entities is None:
+        return f'Unknown region code: {region_code}.'
+
+    if entity in valid_entities:
+        return (
+            f'Entity {entity} is valid in EDMCS '
+            f'for region {region_code}.'
+        )
+
+    return (
+        f'Entity {entity} is not valid in EDMCS '
+        f'for region {region_code}.'
+    )
