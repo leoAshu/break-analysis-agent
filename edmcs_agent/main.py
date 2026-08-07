@@ -1,26 +1,38 @@
 from langchain_ollama import ChatOllama
 from langchain_core.messages import HumanMessage, ToolMessage
 
-from models import BreakRecord
-from tools import get_region_code, validate_account, validate_entity
+from edmcs_agent.contracts import BreakRecord
+from edmcs_agent.tools.mock import create_tools
 
 def main():
     record = BreakRecord(
         record_id='ROW-101',
+        business_dt='2026-06-02',
+
         entity='505890',
         dept='A04025',
         branch='000000',
         account='198170',
         sub_account='114110',
+        affiliate='000000',
+        book_code='JGAAP_DELTA',
+        source='11392:039',
+        product='100005',
+        project='BILATERAL',
+        future1='UNASSIGNED',
+        future2='UNASSIGNED',
+
+        ledger='SHARED BD PL',
+        currency='USD',
+
         pre_fah_balance=515.67,
         gl_balance=0.00,
         difference=515.67
     )
 
     tools = {
-        get_region_code.name: get_region_code,
-        validate_account.name: validate_account,
-        validate_entity.name: validate_entity
+        tool.name: tool for tool in
+        create_tools()
     }
 
     model = ChatOllama(
