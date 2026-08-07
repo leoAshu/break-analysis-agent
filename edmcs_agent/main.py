@@ -1,8 +1,17 @@
+import logging
+
 from langchain_ollama import ChatOllama
 
 from edmcs_agent.agent import EDMCSAgent
 from edmcs_agent.contracts import BreakRecord
 from edmcs_agent.tools.mock import create_tools
+
+
+logging.basicConfig(
+    level=logging.WARNING,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+)
+logging.getLogger('edmcs_agent').setLevel(logging.INFO)
 
 
 def main():
@@ -29,7 +38,7 @@ def main():
         sub_account='114110',
         affiliate='000000',
         book_code='JGAAP_DELTA',
-        source='11392:039',
+        source='11392:0397',
         product='100005',
         project='BILATERAL',
         future1='UNASSIGNED',
@@ -43,8 +52,7 @@ def main():
         difference=515.67
     )
 
-    response = agent.investigate(record)
-    print('\nFinal response:\n\n', response.summary)
+    agent.investigate(record)
     
 
 if __name__ == '__main__':

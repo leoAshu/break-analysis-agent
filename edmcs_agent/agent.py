@@ -1,4 +1,6 @@
 import json
+import logging
+import textwrap
 from typing import Any
 from collections.abc import Sequence
 
@@ -17,6 +19,14 @@ from edmcs_agent.contracts import (
     SegmentValidationResult, 
     RegionResolutionResult
 )
+from edmcs_agent.formatters import (
+    format_tool_args, 
+    format_tool_result
+)
+
+
+logger = logging.getLogger('edmcs_agent')
+
 
 class EDMCSAgent:
     '''Investigate reconciliation breaks using EDMCS validation tools.'''
@@ -34,6 +44,8 @@ class EDMCSAgent:
         and returns a structured investigation result containing both
         deterministic validation details and a natural-language summary.
         '''
+        self._log_record_start(record)
+
         resolved_region: str | None = None
         validation_results: list[SegmentValidationResult] = []
 
@@ -56,6 +68,7 @@ class EDMCSAgent:
                     summary=summary,
                 )
 
+                self._log_record_end(result)
                 return result
 
             for tool_call in ai_message.tool_calls:
@@ -83,7 +96,7 @@ class EDMCSAgent:
                 f'{type(e).__name__}: {str(e)}'
             )
 
-        print(f"{tool_name}({tool_call['args']}) -> {tool_result}")
+        self._log_tool_exec(tool_name, tool_args, tool_result)
 
         return ToolExecutionResult(
             message=ToolMessage(
@@ -162,3 +175,54 @@ class EDMCSAgent:
             invalid_segments=invalid_segments,
             summary=summary,
         )
+
+
+    @staticmethod
+    def _log_record_start(record: BreakRecord) -> None:
+        logger.info('=' * 80)
+        logger.info(
+            "INVESTIGATION START | id: %s | date: %s | diff (%s): %s",
+            record.record_id,
+            record.business_dt,
+            record.currency,
+            record.difference,
+        )
+        logger.info('=' * 80)
+        logger.info('')
+
+
+    @staticmethod
+    def _log_tool_exec(tool_name: str, tool_args: dict, tool_result: Any) -> None:
+        args = format_tool_args(tool_args)
+        result = format_tool_result(tool_result)
+
+        logger.info(
+            "TOOL | %-24s | %-32s | %s",
+            tool_name,
+            args,
+            result,
+        )
+
+
+    @staticmethod
+    def _log_record_end(result: InvestigationResult) -> None:
+        logger.info('')
+        logger.info('-' * 80)
+        logger.info(
+            "INVESTIGATION COMPLETE | explained=%s | invalid=%s",
+            result.is_explained,
+            result.invalid_segments if result.invalid_segments else 'None',
+        )
+
+        logger.info("+-- INVESTIGATION SUMMARY " + "-" * 53 + "+")
+
+        for paragraph in result.summary.splitlines():
+            if not paragraph.strip():
+                logger.info("|")
+                continue
+
+            for line in textwrap.wrap(paragraph.strip(), width=74):
+                logger.info("| %s", line)
+
+        logger.info("+" + "-" * 76 + "+")
+        logger.info("=" * 80)
