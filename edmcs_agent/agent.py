@@ -1,11 +1,22 @@
+import json
+from typing import Any
 from collections.abc import Sequence
+
+from pydantic import BaseModel
 
 from langchain_core.tools import BaseTool
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
 
-from edmcs_agent.contracts import BreakRecord
+
 from edmcs_agent.prompts import EDMCS_SYSTEM_PROMPT
+from edmcs_agent.internal import ToolExecutionResult
+from edmcs_agent.contracts import (
+    BreakRecord, 
+    InvestigationResult, 
+    SegmentValidationResult, 
+    RegionResolutionResult
+)
 
 class EDMCSAgent:
     '''Investigate reconciliation breaks using EDMCS validation tools.'''
@@ -15,7 +26,17 @@ class EDMCSAgent:
         self._model = model.bind_tools(list(tools))
 
 
-    def investigate(self, record: BreakRecord) -> str:
+    def investigate(self, record: BreakRecord) -> InvestigationResult:
+        '''
+        Investigate a single reconciliation break.
+
+        Resolves the EDMCS region, validates the required GL segments,
+        and returns a structured investigation result containing both
+        deterministic validation details and a natural-language summary.
+        '''
+        resolved_region: str | None = None
+        validation_results: list[SegmentValidationResult] = []
+
         messages = [
             SystemMessage(content=EDMCS_SYSTEM_PROMPT),
             HumanMessage(content=self._build_user_prompt(record))
@@ -26,14 +47,29 @@ class EDMCSAgent:
             messages.append(ai_message)
 
             if not ai_message.tool_calls:
-                return ai_message.content
+                summary = ai_message.content
+
+                result = self._build_investigation_result(
+                    record=record,
+                    region_code=resolved_region,
+                    validation_results=validation_results,
+                    summary=summary,
+                )
+
+                return result
 
             for tool_call in ai_message.tool_calls:
-                tool_message = self._execute_tool(tool_call)
-                messages.append(tool_message)
+                tool_exec = self._execute_tool(tool_call)
+                messages.append(tool_exec.message)
+
+                if isinstance(tool_exec.result, RegionResolutionResult):
+                    resolved_region = tool_exec.result.region_code
+
+                if isinstance(tool_exec.result, SegmentValidationResult):
+                    validation_results.append(tool_exec.result)
 
 
-    def _execute_tool(self, tool_call: dict) -> ToolMessage:
+    def _execute_tool(self, tool_call: dict) -> ToolExecutionResult:
         tool_name = tool_call['name']
         tool_args = tool_call['args']
 
@@ -49,9 +85,13 @@ class EDMCSAgent:
 
         print(f"{tool_name}({tool_call['args']}) -> {tool_result}")
 
-        return ToolMessage(
-            content=str(tool_result),
-            tool_call_id=tool_call["id"],
+        return ToolExecutionResult(
+            message=ToolMessage(
+                content=self._serialize_tool_result(tool_result),
+                tool_call_id=tool_call['id'],
+                name=tool_name,
+            ),
+            result=tool_result,
         )
     
 
@@ -77,4 +117,48 @@ class EDMCSAgent:
             f'gl_balance: {record.gl_balance}\n'
             f'difference: {record.difference}\n\n'
             'Please provide a detailed explanation of your findings.'
+        )
+
+
+    @staticmethod
+    def _serialize_tool_result(result: Any) -> str:
+        if isinstance(result, BaseModel):
+            return result.model_dump_json()
+
+        if isinstance(result, (dict, list)):
+            return json.dumps(result, default=str)
+
+        return str(result)
+
+
+    @staticmethod
+    def _get_invalid_segments(
+        validation_results: list[SegmentValidationResult],
+    ) -> list[str]:
+        return [
+            result.segment_name
+            for result in validation_results
+            if not result.is_valid
+        ]
+
+
+    @staticmethod
+    def _build_investigation_result(
+        record: BreakRecord,
+        region_code: str | None,
+        validation_results: list[SegmentValidationResult],
+        summary: str,
+    ) -> InvestigationResult:
+        invalid_segments = EDMCSAgent._get_invalid_segments(validation_results)
+
+        return InvestigationResult(
+            record_id=record.record_id,
+            region_code=region_code,
+            pre_fah_balance=record.pre_fah_balance,
+            gl_balance=record.gl_balance,
+            difference=record.difference,
+            validations=validation_results,
+            is_explained=bool(invalid_segments),
+            invalid_segments=invalid_segments,
+            summary=summary,
         )

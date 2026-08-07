@@ -44,7 +44,7 @@ def main():
     )
 
     response = agent.investigate(record)
-    print('Final response:\n', response)
+    print('\nFinal response:\n\n', response.summary)
     
 
 if __name__ == '__main__':

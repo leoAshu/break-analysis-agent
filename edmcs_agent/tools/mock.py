@@ -1,9 +1,16 @@
 from collections.abc import Sequence
+
 from langchain_core.tools import tool, BaseTool
+
+from edmcs_agent.contracts import (
+    RegionResolutionResult,
+    SegmentValidationResult,
+)
+
 
 def create_tools() -> Sequence[BaseTool]:
     @tool
-    def get_region_code(entity: str) -> str:
+    def get_region_code(entity: str) -> RegionResolutionResult:
         '''Return the EDMCS region code for the given entity.'''
 
         region_by_entity = {
@@ -14,10 +21,10 @@ def create_tools() -> Sequence[BaseTool]:
 
         region_code = region_by_entity.get(entity)
 
-        if region_code is None:
-            return f'No region code found for entity {entity}.'
-
-        return region_code
+        return RegionResolutionResult(
+            region_code=region_code,
+            region_name=None
+        )
 
 
     @tool
@@ -37,7 +44,13 @@ def create_tools() -> Sequence[BaseTool]:
             f'Entity {entity_code} was not found in EDMCS for region {region_code}.'
         )
 
-        return message
+        return SegmentValidationResult(
+            segment_name='entity',
+            segment_value=entity_code,
+            is_valid=is_valid,
+            reason=message,
+            reference_data={'region_code': region_code}
+        )
 
 
     @tool
@@ -57,7 +70,13 @@ def create_tools() -> Sequence[BaseTool]:
             f'Department {department_code} was not found in EDMCS for region {region_code}.'
         )
 
-        return message
+        return SegmentValidationResult(
+            segment_name='department',
+            segment_value=department_code,
+            is_valid=is_valid,
+            reason=message,
+            reference_data={'region_code': region_code}
+        )
 
 
     @tool
@@ -77,7 +96,13 @@ def create_tools() -> Sequence[BaseTool]:
             f'Branch {branch_code} was not found in EDMCS for region {region_code}.'
         )
 
-        return message
+        return SegmentValidationResult(
+            segment_name='branch',
+            segment_value=branch_code,
+            is_valid=is_valid,
+            reason=message,
+            reference_data={'region_code': region_code}
+        )
 
 
     @tool
@@ -97,7 +122,13 @@ def create_tools() -> Sequence[BaseTool]:
             f'Account {account_code} was not found in EDMCS for region {region_code}.'
         )
 
-        return message
+        return SegmentValidationResult(
+            segment_name='account',
+            segment_value=account_code,
+            is_valid=is_valid,
+            reason=message,
+            reference_data={'region_code': region_code}
+        )
 
 
     @tool
@@ -117,7 +148,13 @@ def create_tools() -> Sequence[BaseTool]:
             f'Sub-Account {sub_account_code} was not found in EDMCS for region {region_code}.'
         )
 
-        return message
+        return SegmentValidationResult(
+            segment_name='sub_account',
+            segment_value=sub_account_code,
+            is_valid=is_valid,
+            reason=message,
+            reference_data={'region_code': region_code}
+        )
 
 
     @tool
@@ -137,7 +174,13 @@ def create_tools() -> Sequence[BaseTool]:
             f'Affiliate {affiliate_code} was not found in EDMCS for region {region_code}.'
         )
 
-        return message
+        return SegmentValidationResult(
+            segment_name='affiliate',
+            segment_value=affiliate_code,
+            is_valid=is_valid,
+            reason=message,
+            reference_data={'region_code': region_code}
+        )
 
 
     @tool 
@@ -157,7 +200,13 @@ def create_tools() -> Sequence[BaseTool]:
             f'Book Code {book_code} was not found in EDMCS for region {region_code}.'
         )
 
-        return message
+        return SegmentValidationResult(
+            segment_name='book_code',
+            segment_value=book_code,
+            is_valid=is_valid,
+            reason=message,
+            reference_data={'region_code': region_code}
+        )
 
 
     @tool
@@ -177,7 +226,13 @@ def create_tools() -> Sequence[BaseTool]:
             f'Source {source_code} was not found in EDMCS for region {region_code}.'
         )
 
-        return message
+        return SegmentValidationResult(
+            segment_name='source',
+            segment_value=source_code,
+            is_valid=is_valid,
+            reason=message,
+            reference_data={'region_code': region_code}
+        )
 
 
     @tool
@@ -197,7 +252,13 @@ def create_tools() -> Sequence[BaseTool]:
             f'Product {product_code} was not found in EDMCS for region {region_code}.'
         )
 
-        return message
+        return SegmentValidationResult(
+            segment_name='product',
+            segment_value=product_code,
+            is_valid=is_valid,
+            reason=message,
+            reference_data={'region_code': region_code}
+        )
 
 
     @tool
@@ -217,7 +278,13 @@ def create_tools() -> Sequence[BaseTool]:
             f'Project {project_code} was not found in EDMCS for region {region_code}.'
         )
 
-        return message
+        return SegmentValidationResult(
+            segment_name='project',
+            segment_value=project_code,
+            is_valid=is_valid,
+            reason=message,
+            reference_data={'region_code': region_code}
+        )
 
 
     return [

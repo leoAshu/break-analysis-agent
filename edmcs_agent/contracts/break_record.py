@@ -1,6 +1,8 @@
 from typing import Any
 from decimal import Decimal
+
 from pydantic import BaseModel, Field
+
 
 class BreakRecord(BaseModel):
     '''A reconciliation break record that requires EDMCS investigation.'''
