@@ -1,3 +1,4 @@
+from typing import Any
 from decimal import Decimal
 from pydantic import BaseModel, Field
 
@@ -68,3 +69,20 @@ class BreakRecord(BaseModel):
     currency: str = Field(
         description='Currency segment.'
     )
+
+
+    def segment_values(self) -> dict[str, Any]:
+        '''Return the GL segments that require EDMCS validation.'''
+
+        return {
+            'entity': self.entity,
+            'department': self.department,
+            'branch': self.branch,
+            'account': self.account,
+            'sub_account': self.sub_account,
+            'affiliate': self.affiliate,
+            'book_code': self.book_code,
+            'source': self.source,
+            'product': self.product,
+            'project': self.project,
+        }
