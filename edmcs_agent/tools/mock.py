@@ -222,6 +222,14 @@ def create_tools() -> Sequence[BaseTool]:
 
     return [
         get_region_code,
+        validate_entity,
+        validate_department,
+        validate_branch,
         validate_account,
-        validate_entity
+        validate_sub_account,
+        validate_affiliate,
+        validate_book_code,
+        validate_source,
+        validate_product,
+        validate_project,
     ]

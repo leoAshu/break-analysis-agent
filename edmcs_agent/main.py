@@ -1,8 +1,9 @@
 from langchain_ollama import ChatOllama
-from langchain_core.messages import HumanMessage, ToolMessage
+from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
 
 from edmcs_agent.contracts import BreakRecord
 from edmcs_agent.tools.mock import create_tools
+from edmcs_agent.prompts import EDMCS_SYSTEM_PROMPT
 
 def main():
     record = BreakRecord(
@@ -10,7 +11,7 @@ def main():
         business_dt='2026-06-02',
 
         entity='505890',
-        dept='A04025',
+        department='A04025',
         branch='000000',
         account='198170',
         sub_account='114110',
@@ -42,21 +43,31 @@ def main():
     model_with_tools = model.bind_tools(list(tools.values()))
 
     messages = [
+        SystemMessage(
+            content=EDMCS_SYSTEM_PROMPT
+        ),
         HumanMessage(
             content=(
-                'Investigate whether the account and entity in this '
-                'reconciliation record are valid in EDMCS.\n\n'
-                'Instructions:\n'
-                '1. First call get_region_code using the entity.\n'
-                '2. Copy the exact region code returned by that tool.\n'
-                '3. Use that exact region code to call validate_account.\n'
-                '4. Use that same exact region code to call validate_entity.\n'
-                '5. Validate both segments even if one validation fails.\n'
-                '6. Do not infer, replace, translate, or normalize the '
-                'region code.\n'
-                '7. After both validations, provide a combined conclusion.\n\n'
+                f'Investigate whether this reconciliation break identified on {record.business_dt} '
+                'is explained by invalid EDMCS segment values.\n\n'
+                'Record:\n'
                 f'Entity: {record.entity}\n'
-                f'Account: {record.account}'
+                f'Department: {record.department}\n'
+                f'Branch: {record.branch}\n'
+                f'Account: {record.account}\n'
+                f'Sub-account: {record.sub_account}\n'
+                f'Affiliate: {record.affiliate}\n'
+                f'Book code: {record.book_code}\n'
+                f'Source: {record.source}\n'
+                f'Product: {record.product}\n'
+                f'Project: {record.project}\n'
+                f'Future1: {record.future1}\n'
+                f'Future2: {record.future2}\n'
+                f'Ledger: {record.ledger}\n'
+                f'Currency: {record.currency}\n'
+                f'Pre-FAH balance: {record.pre_fah_balance}\n'
+                f'GL balance: {record.gl_balance}\n'
+                f'Difference: {record.difference}\n'
             )
         )
     ]
@@ -74,7 +85,7 @@ def main():
             tool_result = selected_tool.invoke(tool_call['args'])
 
             print(
-                f"{tool_call['name']}({tool_call['args']}) "
+                f'{tool_call["name"]}({tool_call["args"]}) '
                 f'-> {tool_result}'
             )
 

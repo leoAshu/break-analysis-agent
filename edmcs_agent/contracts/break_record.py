@@ -27,7 +27,7 @@ class BreakRecord(BaseModel):
     entity: str = Field(
         description='Entity GL Segment.'
     )
-    dept: str = Field(
+    department: str = Field(
         description='Department GL Segment.'
     )
     branch: str = Field(
