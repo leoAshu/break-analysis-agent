@@ -55,6 +55,7 @@ def log_analysis_complete(logger: Logger, record_id: str, is_explained: bool, ex
 
     logger.info('-' * WIDTH)
     logger.info('SUMMARY')
+    logger.info('-' * WIDTH)
     for paragraph in explanation.splitlines():
         for line in textwrap.wrap(paragraph.strip(), width=WIDTH - 6):
             logger.info('%s', line)

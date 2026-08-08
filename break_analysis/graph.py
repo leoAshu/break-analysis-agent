@@ -1,12 +1,13 @@
 import logging
 
 from langgraph.graph import END, START, StateGraph
+from langgraph.graph.state import CompiledStateGraph
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from break_analysis.contracts import BreakAnalysisResult
-from break_analysis.state import BreakAnalysisState, AnalysisStatus
 from break_analysis.prompts import ANALYZE_RESULT_SYSTEM_PROMPT
+from break_analysis.state import BreakAnalysisState, AnalysisStatus
 
 from edmcs_agent import EDMCSAgent
 
@@ -36,6 +37,7 @@ class BreakAnalysisGraph:
         return self._graph.invoke(state)
 
 
+    # Node
     def _investigate_edmcs(self, state: BreakAnalysisState) -> dict:
         log_dispatch_agent(
             logger, 
@@ -49,6 +51,7 @@ class BreakAnalysisGraph:
         }
 
 
+    # Node
     @staticmethod
     def _evaluate_edmcs(state: BreakAnalysisState) -> dict:
         edmcs_result = state['edmcs_result']
@@ -64,6 +67,7 @@ class BreakAnalysisGraph:
         }
 
 
+    # Node
     def _generate_explanation(self, state: BreakAnalysisState) -> dict:
         edmcs_result = state['edmcs_result']
 
@@ -79,6 +83,7 @@ class BreakAnalysisGraph:
         }
 
 
+    # Node
     @staticmethod
     def _build_final_result(state: BreakAnalysisState) -> dict:
         record = state['record']
@@ -105,7 +110,7 @@ class BreakAnalysisGraph:
         }
 
 
-    def _build(self) -> StateGraph:
+    def _build(self) -> CompiledStateGraph:
         graph = StateGraph(BreakAnalysisState)
 
         # Nodes
