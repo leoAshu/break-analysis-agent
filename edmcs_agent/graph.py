@@ -12,7 +12,7 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import ToolMessage, HumanMessage
 
 from edmcs_agent.state import EDMCSAgentState
-from edmcs_agent.constants import REQUIRED_SEGMENTS
+from edmcs_agent.constants import MAX_RETRIES
 from edmcs_agent.contracts import (
     InvestigationResult,
     RegionResolutionResult,
@@ -112,13 +112,17 @@ class EDMCSGraph:
     # Node
     @staticmethod
     def _validate_completion(state: EDMCSAgentState) -> dict:
+        required_segments = set(
+            state['record'].segment_values()
+        )
+
         validated_sgements = {
             result.segment_name
             for result in state['validation_results']
         }
 
         missing_segments = sorted(
-            REQUIRED_SEGMENTS - validated_sgements
+            required_segments - validated_sgements
         )
 
         is_complete = (
@@ -132,6 +136,7 @@ class EDMCSGraph:
         }
 
 
+    # Node
     @staticmethod
     def _request_missing_validations(state: EDMCSAgentState) -> dict:
         missing_segments = ', '.join(state['missing_segments'])
@@ -151,7 +156,19 @@ class EDMCSGraph:
                 *state['messages'],
                 message,
             ],
+            'retry_count': state['retry_count'] + 1,
         }
+
+
+    # Node
+    @staticmethod
+    def _complete_with_failure(state: EDMCSAgentState) -> dict:
+        missing_segments = ', '.join(state['missing_segments'])
+
+        raise RuntimeError(
+            'EDMCS investigation could not complete all required '
+            f'validations. Missing segments: {missing_segments}.'
+        )
 
 
     # Node
@@ -196,6 +213,9 @@ class EDMCSGraph:
     def _route_after_completion(state: EDMCSAgentState) -> str:
         if state['is_complete']:
             return 'build_result'
+
+        if state['retry_count'] >= MAX_RETRIES:
+            return 'complete_with_failure'
 
         return 'request_missing_validations'
 
@@ -244,6 +264,10 @@ class EDMCSGraph:
             self._request_missing_validations,
         )
         graph.add_node(
+            'complete_with_failure',
+            self._complete_with_failure,
+        )
+        graph.add_node(
             'build_result',
             self._build_result,
         )
@@ -271,6 +295,7 @@ class EDMCSGraph:
             {
                 'build_result': 'build_result',
                 'request_missing_validations': 'request_missing_validations',
+                'complete_with_failure': 'complete_with_failure',
             }
         )
         graph.add_edge(

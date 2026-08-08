@@ -19,4 +19,5 @@ class EDMCSAgentState(TypedDict):
     validation_results: list[SegmentValidationResult]
     missing_segments: list[str]
     is_complete: bool
+    retry_count: int
     result: InvestigationResult | None

@@ -57,6 +57,7 @@ class EDMCSAgent:
             'validation_results': [],
             'missing_segments': [],
             'is_complete': False,
+            'retry_count': 0,
             'result': None
         }
 
