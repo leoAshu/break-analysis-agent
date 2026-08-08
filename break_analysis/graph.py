@@ -1,3 +1,5 @@
+import logging
+
 from langgraph.graph import END, START, StateGraph
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -7,6 +9,16 @@ from break_analysis.state import BreakAnalysisState, AnalysisStatus
 from break_analysis.prompts import ANALYZE_RESULT_SYSTEM_PROMPT
 
 from edmcs_agent import EDMCSAgent
+
+from log_utils import (
+    log_analysis_start,
+    log_dispatch_agent,
+    log_analysis_complete
+)
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class BreakAnalysisGraph:
@@ -19,10 +31,17 @@ class BreakAnalysisGraph:
 
 
     def invoke(self, state: BreakAnalysisState) -> BreakAnalysisState:
+        log_analysis_start(logger, state['record'])
+
         return self._graph.invoke(state)
 
 
     def _investigate_edmcs(self, state: BreakAnalysisState) -> dict:
+        log_dispatch_agent(
+            logger, 
+            agent_name=self._edmcs_agent.NAME, 
+            reason='validate GL segments against EDMCS data'
+        )
         edmcs_result = self._edmcs_agent.investigate(state['record'])
 
         return {
@@ -67,13 +86,22 @@ class BreakAnalysisGraph:
         edmcs_result = state['edmcs_result']
         is_explained = state['analysis_status'] == AnalysisStatus.EXPLAINED
 
+        result = BreakAnalysisResult(
+            record_id=record.record_id,
+            is_explained=is_explained,
+            explanation=explanation,
+            edmcs_result=edmcs_result,
+        )
+
+        log_analysis_complete(
+            logger, 
+            record_id=record.record_id, 
+            is_explained=is_explained, 
+            explanation=explanation
+        )
+
         return {
-            'result': BreakAnalysisResult(
-                record_id=record.record_id,
-                is_explained=is_explained,
-                explanation=explanation,
-                edmcs_result=edmcs_result,
-            ),
+            'result': result
         }
 
 

@@ -11,7 +11,7 @@ from break_analysis import BreakAnalysisAgent
 
 logging.basicConfig(
     level=logging.WARNING,
-    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    format='%(asctime)s [%(levelname)s] %(name)-24s: %(message)s',
 )
 logging.getLogger(__name__).setLevel(logging.INFO)
 
