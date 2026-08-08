@@ -97,7 +97,10 @@ class EDMCSGraph:
                 region_resolution = tool_result
 
             if isinstance(tool_result, SegmentValidationResult):
-                validation_results.append(tool_result)
+                self._upsert_validation_result(
+                    validation_results,
+                    tool_result
+                )
 
         return {
             'messages': [
@@ -220,6 +223,7 @@ class EDMCSGraph:
         return 'request_missing_validations'
 
 
+    # Helper
     @staticmethod
     def _serialize_tool_result(result: Any) -> str:
         if isinstance(result, BaseModel):
@@ -231,6 +235,7 @@ class EDMCSGraph:
         return str(result)
 
 
+    # Helper
     @staticmethod
     def _get_invalid_segments(
         validation_results: list[SegmentValidationResult],
@@ -240,6 +245,19 @@ class EDMCSGraph:
             for result in validation_results
             if not result.is_valid
         ]
+
+
+    # Helper
+    @staticmethod
+    def _upsert_validation_result(
+        validation_results: list[SegmentValidationResult],
+        result: SegmentValidationResult,
+    ) -> list[SegmentValidationResult]:
+        return [
+            existing
+            for existing in validation_results
+            if existing.segment_name != result.segment_name
+        ] + [result]
 
 
     # build the graph
