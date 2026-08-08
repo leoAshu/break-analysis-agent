@@ -30,6 +30,7 @@ def main():
     )
 
     agent = BreakAnalysisAgent(
+        model=model,
         edmcs_agent=edmcs_agent
     )
 

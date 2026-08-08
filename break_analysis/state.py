@@ -16,4 +16,5 @@ class BreakAnalysisState(TypedDict):
     record: BreakRecord
     edmcs_result: InvestigationResult
     analysis_status: AnalysisStatus
+    explanation: str
     result: BreakAnalysisResult
