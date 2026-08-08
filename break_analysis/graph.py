@@ -1,7 +1,7 @@
 from langgraph.graph import END, START, StateGraph
 
 from break_analysis.contracts import BreakAnalysisResult
-from break_analysis.state import BreakAnalysisState
+from break_analysis.state import BreakAnalysisState, AnalysisStatus
 
 from edmcs_agent import EDMCSAgent
 
@@ -27,13 +27,29 @@ class BreakAnalysisGraph:
 
 
     @staticmethod
+    def _evaluate_edmcs(state: BreakAnalysisState) -> dict:
+        edmcs_result = state['edmcs_result']
+
+        status = (
+            AnalysisStatus.EXPLAINED 
+            if edmcs_result.is_explained 
+            else AnalysisStatus.UNEXPLAINED
+        )
+
+        return {
+            'analysis_status': status,
+        }
+
+
+    @staticmethod
     def _build_final_result(state: BreakAnalysisState) -> dict:
         edmcs_result = state['edmcs_result']
+        is_explained = state['analysis_status'] == AnalysisStatus.EXPLAINED
 
         return {
             'result': BreakAnalysisResult(
                 record_id=state['record'].record_id,
-                is_explained=edmcs_result.is_explained,
+                is_explained=is_explained,
                 explanation=edmcs_result.summary,
                 edmcs_result=edmcs_result,
             ),
@@ -49,6 +65,10 @@ class BreakAnalysisGraph:
             self._investigate_edmcs,
         )
         graph.add_node(
+            'evaluate_edmcs',
+            self._evaluate_edmcs,
+        )
+        graph.add_node(
             'build_final_result',
             self._build_final_result,
         )
@@ -60,6 +80,10 @@ class BreakAnalysisGraph:
         )
         graph.add_edge(
             'investigate_edmcs',
+            'evaluate_edmcs',
+        )
+        graph.add_edge(
+            'evaluate_edmcs',
             'build_final_result',
         )
         graph.add_edge(
