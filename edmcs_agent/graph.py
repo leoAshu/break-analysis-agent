@@ -142,15 +142,23 @@ class EDMCSGraph:
     # Node
     @staticmethod
     def _request_missing_validations(state: EDMCSAgentState) -> dict:
-        missing_segments = ', '.join(state['missing_segments'])
+        missing_items: list[str] = []
+
+        if state['region_resolution'] is None:
+            missing_items.append('region resolution')
+
+        if state['missing_segments']:
+            missing_items.append(
+                'segment validations: '
+                + ', '.join(state['missing_segments'])
+            )
 
         message = HumanMessage(
             content=(
                 'The investigation is incomplete. '
-                f'Validate the following remaining segments: '
-                f'{missing_segments}. '
-                'Use the available tools and complete all validations '
-                'before providing the final response.'
+                'Complete the following before providing a final response: '
+                + '; '.join(missing_items)
+                + '.'
             )
         )
 
@@ -166,11 +174,21 @@ class EDMCSGraph:
     # Node
     @staticmethod
     def _complete_with_failure(state: EDMCSAgentState) -> dict:
-        missing_segments = ', '.join(state['missing_segments'])
+        missing_items: list[str] = []
+
+        if state['region_resolution'] is None:
+            missing_items.append('region resolution')
+
+        if state['missing_segments']:
+            missing_items.append(
+                'segment validations: '
+                + ', '.join(state['missing_segments'])
+            )
 
         raise RuntimeError(
-            'EDMCS investigation could not complete all required '
-            f'validations. Missing segments: {missing_segments}.'
+            'EDMCS investigation could not complete: '
+            + '; '.join(missing_items)
+            + '.'
         )
 
 
