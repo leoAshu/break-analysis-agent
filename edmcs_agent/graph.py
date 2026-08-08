@@ -97,7 +97,7 @@ class EDMCSGraph:
                 region_resolution = tool_result
 
             if isinstance(tool_result, SegmentValidationResult):
-                self._upsert_validation_result(
+                validation_results = self._upsert_validation_result(
                     validation_results,
                     tool_result
                 )
@@ -115,26 +115,41 @@ class EDMCSGraph:
     # Node
     @staticmethod
     def _validate_completion(state: EDMCSAgentState) -> dict:
-        required_segments = set(
-            state['record'].segment_values()
-        )
+        required_segments = state['record'].segment_values()
 
         validated_sgements = {
-            result.segment_name
+            result.segment_name: result
             for result in state['validation_results']
         }
 
         missing_segments = sorted(
-            required_segments - validated_sgements
+            set(required_segments) - set(validated_sgements)
+        )
+
+        unexpected_segments = sorted(
+            set(validated_sgements) - set(required_segments)
+        )
+
+        mismatched_segments = sorted(
+            segment_name
+            for segment_name, result in validated_sgements.items()
+            if (
+                segment_name in required_segments
+                and result.segment_value != required_segments[segment_name]
+            )
         )
 
         is_complete = (
             state['region_resolution'] is not None
             and not missing_segments
+            and not unexpected_segments
+            and not mismatched_segments
         )
 
         return {
             'missing_segments': missing_segments,
+            'unexpected_segments': unexpected_segments,
+            'mismatched_segments': mismatched_segments,
             'is_complete': is_complete,
         }
 
@@ -151,6 +166,18 @@ class EDMCSGraph:
             missing_items.append(
                 'segment validations: '
                 + ', '.join(state['missing_segments'])
+            )
+
+        if state['unexpected_segments']:
+            missing_items.append(
+                'remove or correct unexpected validations: '
+                + ', '.join(state['unexpected_segments'])
+            )
+
+        if state['mismatched_segments']:
+            missing_items.append(
+                'revalidate segments with incorrect values: '
+                + ', '.join(state['mismatched_segments'])
             )
 
         message = HumanMessage(
@@ -183,6 +210,18 @@ class EDMCSGraph:
             missing_items.append(
                 'segment validations: '
                 + ', '.join(state['missing_segments'])
+            )
+
+        if state['unexpected_segments']:
+            missing_items.append(
+                'unexpected segments: '
+                + ', '.join(state['unexpected_segments'])
+            )
+
+        if state['mismatched_segments']:
+            missing_items.append(
+                'mismatched segments: '
+                + ', '.join(state['mismatched_segments'])
             )
 
         raise RuntimeError(

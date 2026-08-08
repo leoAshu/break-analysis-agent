@@ -15,9 +15,15 @@ class EDMCSAgentState(TypedDict):
 
     record: BreakRecord
     messages: list[BaseMessage]
+
     region_resolution: RegionResolutionResult | None
     validation_results: list[SegmentValidationResult]
+
     missing_segments: list[str]
+    unexpected_segments: list[str]
+    mismatched_segments: list[str]
+
     is_complete: bool
     retry_count: int
+
     result: InvestigationResult | None

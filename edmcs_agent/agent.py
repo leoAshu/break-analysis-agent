@@ -53,11 +53,17 @@ class EDMCSAgent:
         initial_state: EDMCSAgentState = {
             'record': record,
             'messages': messages,
+
             'region_resolution': None,
             'validation_results': [],
+
             'missing_segments': [],
+            'unexpected_segments': [],
+            'mismatched_segments': [],
+
             'is_complete': False,
             'retry_count': 0,
+
             'result': None
         }
 
