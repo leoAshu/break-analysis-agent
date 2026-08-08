@@ -25,7 +25,8 @@ from edmcs_agent.formatters import (
 )
 
 
-logger = logging.getLogger('edmcs_agent')
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class EDMCSAgent:

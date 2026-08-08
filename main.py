@@ -2,16 +2,18 @@ import logging
 
 from langchain_ollama import ChatOllama
 
-from edmcs_agent.agent import EDMCSAgent
+from edmcs_agent import EDMCSAgent
 from edmcs_agent.contracts import BreakRecord
 from edmcs_agent.tools.mock import create_tools
+
+from break_analysis import BreakAnalysisAgent
 
 
 logging.basicConfig(
     level=logging.WARNING,
     format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
 )
-logging.getLogger('edmcs_agent').setLevel(logging.INFO)
+logging.getLogger(__name__).setLevel(logging.INFO)
 
 
 def main():
@@ -22,9 +24,13 @@ def main():
 
     tools = create_tools()
 
-    agent = EDMCSAgent(
+    edmcs_agent = EDMCSAgent(
         model=model, 
         tools=tools
+    )
+
+    agent = BreakAnalysisAgent(
+        edmcs_agent=edmcs_agent
     )
 
     record = BreakRecord(
@@ -52,7 +58,7 @@ def main():
         difference=515.67
     )
 
-    agent.investigate(record)
+    agent.analyze(record)
     
 
 if __name__ == '__main__':
