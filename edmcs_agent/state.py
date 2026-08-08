@@ -17,4 +17,6 @@ class EDMCSAgentState(TypedDict):
     messages: list[BaseMessage]
     region_resolution: RegionResolutionResult | None
     validation_results: list[SegmentValidationResult]
+    missing_segments: list[str]
+    is_complete: bool
     result: InvestigationResult | None

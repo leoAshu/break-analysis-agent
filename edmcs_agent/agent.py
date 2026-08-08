@@ -55,6 +55,8 @@ class EDMCSAgent:
             'messages': messages,
             'region_resolution': None,
             'validation_results': [],
+            'missing_segments': [],
+            'is_complete': False,
             'result': None
         }
 

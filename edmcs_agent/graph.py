@@ -9,9 +9,10 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.graph.state import CompiledStateGraph
 from langchain_core.tools import BaseTool
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import ToolMessage
+from langchain_core.messages import ToolMessage, HumanMessage
 
 from edmcs_agent.state import EDMCSAgentState
+from edmcs_agent.constants import REQUIRED_SEGMENTS
 from edmcs_agent.contracts import (
     InvestigationResult,
     RegionResolutionResult,
@@ -59,7 +60,7 @@ class EDMCSGraph:
     def _execute_tools(self, state: EDMCSAgentState) -> dict:
         response = state['messages'][-1]
 
-        messages = list(state['messages'])
+        tool_messages = []
         region_resolution = state['region_resolution']
         validation_results = list(state['validation_results'])
 
@@ -84,7 +85,7 @@ class EDMCSGraph:
                 tool_result=format_tool_result(tool_result),
             )
 
-            messages.append(
+            tool_messages.append(
                 ToolMessage(
                     content=self._serialize_tool_result(tool_result),
                     tool_call_id=tool_call['id'],
@@ -99,9 +100,57 @@ class EDMCSGraph:
                 validation_results.append(tool_result)
 
         return {
-            'messages': messages,
+            'messages': [
+                *state['messages'],
+                *tool_messages
+            ],
             'region_resolution': region_resolution,
             'validation_results': validation_results,
+        }
+
+
+    # Node
+    @staticmethod
+    def _validate_completion(state: EDMCSAgentState) -> dict:
+        validated_sgements = {
+            result.segment_name
+            for result in state['validation_results']
+        }
+
+        missing_segments = sorted(
+            REQUIRED_SEGMENTS - validated_sgements
+        )
+
+        is_complete = (
+            state['region_resolution'] is not None
+            and not missing_segments
+        )
+
+        return {
+            'missing_segments': missing_segments,
+            'is_complete': is_complete,
+        }
+
+
+    @staticmethod
+    def _request_missing_validations(state: EDMCSAgentState) -> dict:
+        missing_segments = ', '.join(state['missing_segments'])
+
+        message = HumanMessage(
+            content=(
+                'The investigation is incomplete. '
+                f'Validate the following remaining segments: '
+                f'{missing_segments}. '
+                'Use the available tools and complete all validations '
+                'before providing the final response.'
+            )
+        )
+
+        return {
+            'messages': [
+                *state['messages'],
+                message,
+            ],
         }
 
 
@@ -139,7 +188,16 @@ class EDMCSGraph:
         if response.tool_calls:
             return 'execute_tools'
 
-        return 'build_result'
+        return 'validate_completion'
+
+
+    # Route
+    @staticmethod
+    def _route_after_completion(state: EDMCSAgentState) -> str:
+        if state['is_complete']:
+            return 'build_result'
+
+        return 'request_missing_validations'
 
 
     @staticmethod
@@ -178,6 +236,14 @@ class EDMCSGraph:
             self._execute_tools,
         )
         graph.add_node(
+            'validate_completion',
+            self._validate_completion,
+        )
+        graph.add_node(
+            'request_missing_validations',
+            self._request_missing_validations,
+        )
+        graph.add_node(
             'build_result',
             self._build_result,
         )
@@ -192,11 +258,23 @@ class EDMCSGraph:
             self._route_after_model,
             {
                 'execute_tools': 'execute_tools',
-                'build_result': 'build_result',
+                'validate_completion': 'validate_completion',
             }
         )
         graph.add_edge(
             'execute_tools',
+            'call_model',
+        )
+        graph.add_conditional_edges(
+            'validate_completion',
+            self._route_after_completion,
+            {
+                'build_result': 'build_result',
+                'request_missing_validations': 'request_missing_validations',
+            }
+        )
+        graph.add_edge(
+            'request_missing_validations',
             'call_model',
         )
         graph.add_edge(
