@@ -44,6 +44,7 @@ class EDMCSGraph:
     def invoke(self, state: EDMCSAgentState) -> EDMCSAgentState:
         return self._graph.invoke(state)
 
+
     # Node
     def _call_model(self, state: EDMCSAgentState) -> dict:
         response = self._model.invoke(state['messages'])
@@ -237,7 +238,7 @@ class EDMCSGraph:
         record = state['record']
         summary = state['messages'][-1].content
         validation_results = state['validation_results']
-        invalid_segments = EDMCSGraph._get_invalid_segments(state['validation_results'])
+        invalid_segments = EDMCSGraph._get_invalid_segments(validation_results)
         region_code = state['region_resolution'].region_code if state['region_resolution'] else None
 
         result = InvestigationResult(
@@ -317,7 +318,7 @@ class EDMCSGraph:
         ] + [result]
 
 
-    # build the graph
+    # Build the graph
     def _build(self) -> CompiledStateGraph:
         graph = StateGraph(EDMCSAgentState)
 
