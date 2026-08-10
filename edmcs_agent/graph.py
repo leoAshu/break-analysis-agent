@@ -237,7 +237,7 @@ class EDMCSGraph:
         record = state['record']
         summary = state['messages'][-1].content
         validation_results = state['validation_results']
-        invalid_segments = EDMCSGraph._get_invalid_segments(state['validation_results'])
+        invalid_segments = EDMCSGraph._get_invalid_segments(validation_results)
         region_code = state['region_resolution'].region_code if state['region_resolution'] else None
 
         result = InvestigationResult(
